@@ -14,7 +14,7 @@ A Chromium browser extension (Chrome, Edge, Brave) to convert videos, images, or
 1. Download **[`Audio-Stickers-v-1.0-en.zip`](https://github.com/vish-4-1/WA-audio-stickers-en/releases/latest/download/Audio-Stickers-v-1.0-en.zip)** from the [Releases](https://github.com/vish-4-1/WA-audio-stickers-en/releases) page and extract it to a permanent folder.
 2. Open `chrome://extensions` (or `brave://extensions` / `edge://extensions`) and enable **Developer mode**.
 3. Click **Load unpacked** and select the extracted extension folder (containing `manifest.json`).
-4. Open or reload [https://web.whatsapp.com](https://web.whatsapp.com) and click the **Sound Stickers** extension icon.
+4. Open or reload [https://web.whatsapp.com](https://web.whatsapp.com) and click the **Audio Stickers** extension icon.
 
 *(Alternatively, if cloning this repository directly, select the `extension/` subfolder when clicking **Load unpacked**.)*
 

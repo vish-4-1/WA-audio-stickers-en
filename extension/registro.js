@@ -27,7 +27,7 @@ $("dl").addEventListener("click", () => {
   const content = JSON.stringify({ exportado: new Date().toISOString(), version: chrome.runtime.getManifest().version, ua: navigator.userAgent, entradas: entries }, null, 1);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([content], { type: "application/json" }));
-  a.download = "sound-stickers-log-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
+  a.download = "audio-stickers-log-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
   a.click();
 });
 $("copy").addEventListener("click", async () => {

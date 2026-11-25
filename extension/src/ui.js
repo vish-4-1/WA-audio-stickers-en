@@ -123,7 +123,7 @@
     const entries = stored && stored.length ? stored : WAAS.entries;
     const content = JSON.stringify({ exportado: new Date().toISOString(), version: WAAS.VERSION, ua: navigator.userAgent, entradas: entries }, null, 1);
     const blob = new Blob([content], { type: "application/json" });
-    const name = "sound-stickers-log-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
+    const name = "audio-stickers-log-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
     if (window.showSaveFilePicker) {
       try {
         const handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "JSON Log", accept: { "application/json": [".json"] } }] });
@@ -943,7 +943,7 @@
 
     const closeBtn = h("button", { class: "close", title: "Close", textContent: "×" });
     const panel = h("div", { class: "panel" },
-      h("header", null, h("div", null, h("h2", null, "Sound Stickers"), h("div", { class: "muted" }, "Version " + WAAS.VERSION + " · processed locally in your browser · max 1 MB per sticker")),
+      h("header", null, h("div", null, h("h2", null, "Audio Stickers"), h("div", { class: "muted" }, "Version " + WAAS.VERSION + " · processed locally in your browser · max 1 MB per sticker")),
         h("div", { class: "hdr-r" }, closeBtn)),
       h("nav", { class: "tabs" }, tabBtns),
       G.forms.map((f) => f.el), tools);
