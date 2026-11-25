@@ -43,6 +43,7 @@
   }
 
   function log(level, event, data) {
+    return null;
     const entry = {
       ts: new Date().toISOString(),
       level,

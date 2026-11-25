@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Stickers con sonido",
+  "name": "Sound Stickers",
   "version": "0.7.2",
-  "description": "Crea stickers con sonido a partir de un video, una imagen o un GIF y envíalos desde WhatsApp Web. Extensión no oficial.",
+  "description": "Create stickers with sound from a video, image, or GIF and send them from WhatsApp Web. Unofficial extension.",
   "icons": {
     "16": "icons/icono-16.png",
     "32": "icons/icono-32.png",
@@ -13,7 +13,7 @@
   "host_permissions": ["https://web.whatsapp.com/*"],
   "background": { "service_worker": "background.js" },
   "action": {
-    "default_title": "Crear sticker con sonido",
+    "default_title": "Create sound sticker",
     "default_icon": {
       "16": "icons/icono-16.png",
       "32": "icons/icono-32.png"

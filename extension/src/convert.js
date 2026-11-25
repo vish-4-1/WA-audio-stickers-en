@@ -33,7 +33,7 @@
   const te = new TextEncoder();
 
   function checkAbort(signal) {
-    if (signal && signal.aborted) throw new DOMException("Cancelado por el usuario", "AbortError");
+    if (signal && signal.aborted) throw new DOMException("Cancelled by user", "AbortError");
   }
 
   // ---------------------------------------------------------------- video
@@ -44,7 +44,7 @@
       v.playsInline = true;
       v.preload = "auto";
       const url = URL.createObjectURL(file);
-      const timer = setTimeout(() => reject(new Error("Tiempo agotado cargando el video")), 30000);
+      const timer = setTimeout(() => { URL.revokeObjectURL(url); reject(new Error("Timed out loading video")); }, 30000);
       v.onloadeddata = async () => {
         clearTimeout(timer);
         // Algunos videos recortados conservan marcas de tiempo que no empiezan en 0
@@ -73,8 +73,9 @@
       };
       v.onerror = () => {
         clearTimeout(timer);
+        URL.revokeObjectURL(url);
         const e = v.error;
-        reject(new Error("El navegador no pudo leer el video" + (e ? ` (código ${e.code}: ${e.message || "formato no soportado"})` : "")));
+        reject(new Error("The browser could not read the video" + (e ? ` (code ${e.code}: ${e.message || "unsupported format"})` : "")));
       };
       v.src = url;
       v._waasUrl = url;
@@ -84,7 +85,7 @@
   function seek(v, t) {
     return new Promise((resolve, reject) => {
       if (Math.abs(v.currentTime - t) < 0.0005 && v.readyState >= 2) return resolve();
-      const timer = setTimeout(() => { v.removeEventListener("seeked", done); reject(new Error(`Tiempo agotado buscando el segundo ${t.toFixed(2)}`)); }, 8000);
+      const timer = setTimeout(() => { v.removeEventListener("seeked", done); reject(new Error(`Timed out seeking to ${t.toFixed(2)} s`)); }, 8000);
       function done() { clearTimeout(timer); resolve(); }
       v.addEventListener("seeked", done, { once: true });
       v.currentTime = t;
@@ -141,7 +142,7 @@
       // El elemento se adjunta al documento (casi invisible) para que Chrome componga sus cuadros.
       v.style.cssText = "position:fixed;right:0;bottom:0;width:4px;height:4px;opacity:0.01;pointer-events:none;z-index:-1";
       document.body.appendChild(v);
-      let watchdog = setTimeout(() => finish(new Error("La reproducción no entregó cuadros")), 4000);
+      let watchdog = setTimeout(() => finish(new Error("Playback produced no frames")), 4000);
       const finish = (err) => {
         if (done) return;
         done = true;
@@ -158,9 +159,9 @@
       };
       const cb = (now, meta) => {
         if (done) return;
-        if (signal && signal.aborted) return finish(new DOMException("Cancelado por el usuario", "AbortError"));
+        if (signal && signal.aborted) return finish(new DOMException("Cancelled by user", "AbortError"));
         clearTimeout(watchdog);
-        watchdog = setTimeout(() => finish(new Error("La reproducción se detuvo")), 4000);
+        watchdog = setTimeout(() => finish(new Error("Playback stalled")), 4000);
         presented++;
         const mt = meta.mediaTime;
         // Los puntos de muestreo anteriores a este cuadro pertenecen al cuadro previo.
@@ -170,7 +171,7 @@
         if (last && !last.used) last.bmpPromise.then((b) => b.close());
         last = snap(v);
         if (pendingFirst) { for (let i = 0; i < pendingFirst; i++) slots[i] = last; last.used = true; pendingFirst = 0; }
-        if (onProgress && presented % 10 === 0) onProgress(`Leyendo cuadros ${next}/${n}`, next / n);
+        if (onProgress && presented % 10 === 0) onProgress(`Reading frames ${next}/${n}`, next / n);
         if (next >= n || mt >= tEnd || v.ended) return finish();
         v.requestVideoFrameCallback(cb);
       };
@@ -197,7 +198,7 @@
       const s = snap(v);
       s.used = true;
       slots.push(s);
-      if (onProgress && (i % 5 === 0 || i === n - 1)) onProgress(`Leyendo cuadros ${i + 1}/${n}`, (i + 1) / n);
+      if (onProgress && (i % 5 === 0 || i === n - 1)) onProgress(`Reading frames ${i + 1}/${n}`, (i + 1) / n);
     }
     return { slots, presented: n };
   }
@@ -208,7 +209,7 @@
     const t0 = performance.now();
     let v = await loadVideo(file);
     try {
-      if (!v.videoWidth || !v.videoHeight) throw new Error("El video no tiene imagen (¿es solo audio?)");
+      if (!v.videoWidth || !v.videoHeight) throw new Error("The video has no image track (audio-only?)");
       const offset = v._waasOffset || 0;
       const methods = method === "reproduccion" ? ["reproduccion", "saltos"] : ["saltos", "reproduccion"];
       let res, metodo;
@@ -260,9 +261,9 @@
   }
 
   async function openDecoder(file) {
-    if (typeof ImageDecoder === "undefined") throw new Error("Este navegador no puede leer GIF animados (falta ImageDecoder). Usa Chrome o Edge actualizados.");
+    if (typeof ImageDecoder === "undefined") throw new Error("This browser cannot read animated GIFs (missing ImageDecoder). Use an up-to-date Chrome or Edge.");
     const type = imageType(file);
-    if (!(await ImageDecoder.isTypeSupported(type))) throw new Error("El navegador no puede leer imágenes " + type);
+    if (!(await ImageDecoder.isTypeSupported(type))) throw new Error("The browser cannot read " + type + " images");
     const dec = new ImageDecoder({ data: await file.arrayBuffer(), type });
     await dec.completed;
     await dec.tracks.ready;
@@ -321,7 +322,7 @@
         const s = snap(image);
         image.close();
         byIndex.set(needed[j], { bmp: await s.bmpPromise, fp: s.fp });
-        if (onProgress && (j % 5 === 0 || j === needed.length - 1)) onProgress(`Leyendo cuadros del GIF ${j + 1}/${needed.length}`, (j + 1) / needed.length);
+        if (onProgress && (j % 5 === 0 || j === needed.length - 1)) onProgress(`Reading GIF frames ${j + 1}/${needed.length}`, (j + 1) / needed.length);
       }
     } finally {
       dec.close();
@@ -334,7 +335,7 @@
   // Imagen fija (JPG, PNG, WebP…). En un GIF se toma el primer cuadro.
   async function probeImage(file) {
     let bmp;
-    try { bmp = await createImageBitmap(file); } catch (e) { throw new Error("El navegador no pudo leer la imagen (" + (e && e.message ? e.message : e) + ")"); }
+    try { bmp = await createImageBitmap(file); } catch (e) { throw new Error("The browser could not read the image (" + (e && e.message ? e.message : e) + ")"); }
     const out = { width: bmp.width, height: bmp.height, animated: false };
     bmp.close();
     if (isAnimationFile(file) && typeof ImageDecoder !== "undefined") {
@@ -371,7 +372,7 @@
   function readChunks(bytes) {
     const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const tag = (o) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
-    if (tag(0) !== "RIFF" || tag(8) !== "WEBP") throw new Error("El canvas no devolvió un WebP válido");
+    if (tag(0) !== "RIFF" || tag(8) !== "WEBP") throw new Error("Canvas did not return a valid WebP");
     const chunks = [];
     let i = 12;
     while (i + 8 <= bytes.length) {
@@ -407,10 +408,10 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const blob = await canvas.convertToBlob({ type: "image/webp", quality });
-    if (blob.type !== "image/webp") throw new Error("Este navegador no puede generar WebP (devolvió " + blob.type + "). Usa Chrome o Edge.");
+    if (blob.type !== "image/webp") throw new Error("This browser cannot encode WebP (returned " + blob.type + "). Use Chrome or Edge.");
     const bytes = new Uint8Array(await blob.arrayBuffer());
     const parts = readChunks(bytes).filter((c) => c.fourcc === "ALPH" || c.fourcc === "VP8 " || c.fourcc === "VP8L");
-    if (!parts.some((c) => c.fourcc === "VP8 " || c.fourcc === "VP8L")) throw new Error("WebP sin datos de imagen");
+    if (!parts.some((c) => c.fourcc === "VP8 " || c.fourcc === "VP8L")) throw new Error("WebP missing image data");
     const payload = concat(parts.map((c) => chunk(c.fourcc, c.data)));
     const hasAlpha = parts.some((c) => c.fourcc === "ALPH" || c.fourcc === "VP8L");
     return { payload, hasAlpha };
@@ -527,7 +528,7 @@
         prevF = f;
         if (prev && sameBytes(prev.payload, enc.payload)) prev.durationMs += p[k].durationMs;
         else out.push({ payload: enc.payload, hasAlpha: enc.hasAlpha, durationMs: p[k].durationMs });
-        if (onProgress && k % 10 === 0) onProgress(`Codificando (${side} px, ${fps} fps, calidad ${Math.round(q * 100)}) ${k + 1}/${p.length}`, (k + 1) / p.length);
+        if (onProgress && k % 10 === 0) onProgress(`Encoding (${side} px, ${fps} fps, quality ${Math.round(q * 100)}) ${k + 1}/${p.length}`, (k + 1) / p.length);
       }
       // Compensación de desfase: el primer cuadro se muestra syncMs más, para que la imagen espere al audio.
       if (syncMs > 0 && !still) out[0] = { ...out[0], durationMs: out[0].durationMs + syncMs };
@@ -538,7 +539,7 @@
     }
     log("info", "webp:intentos", { side, fps, intentos: attempts });
     if (!best || best.bytes.length > MAX_STICKER_BYTES) {
-      throw new Error(`No cabe en 1 MB ni con la calidad mínima (${Math.round(best.bytes.length / 1000)} KB). Elige menos fps o menos resolución.`);
+      throw new Error(`Exceeds 1 MB even at minimum quality (${Math.round(best.bytes.length / 1000)} KB). Choose lower fps or resolution.`);
     }
     return best;
   }
@@ -569,7 +570,7 @@
           const dctx = new OfflineAudioContext(1, SAMPLE_RATE, SAMPLE_RATE);
           return await dctx.decodeAudioData(buf);
         } catch (e) {
-          const err = new Error("No se pudo leer el audio. ¿El archivo tiene sonido? (" + (e && e.message ? e.message : e) + ")");
+          const err = new Error("Could not read audio. Does the file have sound? (" + (e && e.message ? e.message : e) + ")");
           err.cause = e;
           throw err;
         }
@@ -599,7 +600,7 @@
 
   async function extractAudio(file, start, dur, fadeMs = 0) {
     const decoded = await decodeAudioFile(file);
-    if (decoded.duration < start + 0.05) throw new Error(`El audio dura ${decoded.duration.toFixed(2)} s y el tramo empieza en ${start.toFixed(2)} s`);
+    if (decoded.duration < start + 0.05) throw new Error(`Audio is ${decoded.duration.toFixed(2)} s long and the clip starts at ${start.toFixed(2)} s`);
     const len = Math.max(1, Math.round(dur * SAMPLE_RATE));
     const octx = new OfflineAudioContext(1, len, SAMPLE_RATE);
     const src = octx.createBufferSource();
@@ -622,7 +623,7 @@
   }
 
   async function encodeOpus(pcm, bitrate = 32000) {
-    if (typeof AudioEncoder === "undefined") throw new Error("Este navegador no tiene WebCodecs (AudioEncoder). Usa Chrome o Edge actualizados.");
+    if (typeof AudioEncoder === "undefined") throw new Error("This browser lacks WebCodecs (AudioEncoder). Use an up-to-date Chrome or Edge.");
     const base = { codec: "opus", sampleRate: SAMPLE_RATE, numberOfChannels: 1, bitrate };
     const candidates = [
       { ...base, bitrateMode: "variable", opus: { frameDuration: 20000, complexity: 10, application: "voip", signal: "voice" } },
@@ -633,7 +634,7 @@
     for (const c of candidates) {
       try { if ((await AudioEncoder.isConfigSupported(c)).supported) { config = c; break; } } catch (e) { /* probar siguiente */ }
     }
-    if (!config) throw new Error("El navegador no puede codificar Opus con WebCodecs");
+    if (!config) throw new Error("This browser cannot encode Opus with WebCodecs");
     const packets = [];
     let description = null;
     let encError = null;
@@ -690,7 +691,7 @@
       while (len >= 255) { lacing.push(255); len -= 255; }
       lacing.push(len);
     }
-    if (lacing.length > 255) throw new Error("Página Ogg con demasiados segmentos");
+    if (lacing.length > 255) throw new Error("Ogg page has too many segments");
     const dataLen = packetList.reduce((a, p) => a + p.length, 0);
     const page = new Uint8Array(27 + lacing.length + dataLen);
     const dv = new DataView(page.buffer);
@@ -809,11 +810,11 @@
     if (visual.kind === "image") {
       // Un solo cuadro que dura todo el audio: no hay combinaciones de fps que elegir.
       log("info", "analizar:parametros", { tipo: "imagen", archivo: visual.file.name, bytes: visual.file.size, duracionAudio: audio.dur, modo: mode });
-      prog("Leyendo la imagen…", 0.3);
+      prog("Reading image…", 0.3);
       const f = await captureImage(visual.file, SIDE, mode);
       const cells = SIDES.map((side) => ({ side, fps: 1, estado: "ok", score: side }));
       const an = { ...base, frames: [f], captureFps: 1, captureSide: SIDE, distinct: { 1: 1 }, cells, auto: cells[0], ms: Math.round(performance.now() - t0) };
-      prog("Imagen lista", 1);
+      prog("Image ready", 1);
       return an;
     }
 
@@ -829,59 +830,64 @@
       ? await captureAnimation(visual.file, capDur, captureFps, captureSide, mode, capProg, signal)
       : await captureFrames(visual.file, visual.start || 0, capDur, captureFps, captureSide, mode, capProg, signal);
     const frames = fitTimeline(captured, capDur, dur, captureFps, fit);
-    const sides = SIDES.filter((x) => x <= captureSide);
-    const fpsList = FPS_LIST.filter((x) => x <= captureFps);
-    // Cuadros distintos para cada fps (los repetidos se fusionan y casi no pesan).
-    const distinct = {};
-    for (const f of fpsList) {
-      const p = plan(frames.length, dur, f, captureFps);
-      let d = 0;
-      for (let k = 0; k < p.length; k++) {
-        const a = frames[p[k].idx], b = k ? frames[p[k - 1].idx] : null;
-        if (!b || (a !== b && !sameBytes(a.fp, b.fp))) d++;
+    try {
+      const sides = SIDES.filter((x) => x <= captureSide);
+      const fpsList = FPS_LIST.filter((x) => x <= captureFps);
+      // Cuadros distintos para cada fps (los repetidos se fusionan y casi no pesan).
+      const distinct = {};
+      for (const f of fpsList) {
+        const p = plan(frames.length, dur, f, captureFps);
+        let d = 0;
+        for (let k = 0; k < p.length; k++) {
+          const a = frames[p[k].idx], b = k ? frames[p[k - 1].idx] : null;
+          if (!b || (a !== b && !sameBytes(a.fp, b.fp))) d++;
+        }
+        distinct[f] = d;
       }
-      distinct[f] = d;
-    }
-    // Muestra: hasta 24 cuadros distintos repartidos por el tramo, con un desplazamiento
-    // irregular para no coincidir con contenidos que se repiten en ciclos (p. ej. cada segundo).
-    const uniq = [];
-    for (let i = 0; i < frames.length; i++) if (!i || (frames[i] !== frames[i - 1] && !sameBytes(frames[i].fp, frames[i - 1].fp))) uniq.push(frames[i]);
-    const M = Math.min(24, uniq.length);
-    const sample = Array.from({ length: M }, (_, i) => uniq[Math.min(uniq.length - 1, Math.floor(((i + ((i * 0.618) % 1)) * uniq.length) / M))]);
-    const sampleBytes = {};
-    let done = 0;
-    for (const side of sides) {
-      const canvas = new OffscreenCanvas(side, side);
-      const ctx = canvas.getContext("2d");
-      sampleBytes[side] = {};
-      for (const q of [Q_BY_SIDE[side], 0.35, Q_MIN]) {
-        if (sampleBytes[side][q] != null) continue;
-        let sum = 0;
-        for (const f of sample) { checkAbort(signal); sum += (await encodeStaticFrame(f.bmp, q, canvas, ctx)).payload.length; }
-        sampleBytes[side][q] = sum / sample.length;
+      // Muestra: hasta 24 cuadros distintos repartidos por el tramo, con un desplazamiento
+      // irregular para no coincidir con contenidos que se repiten en ciclos (p. ej. cada segundo).
+      const uniq = [];
+      for (let i = 0; i < frames.length; i++) if (!i || (frames[i] !== frames[i - 1] && !sameBytes(frames[i].fp, frames[i - 1].fp))) uniq.push(frames[i]);
+      const M = Math.min(24, uniq.length);
+      const sample = Array.from({ length: M }, (_, i) => uniq[Math.min(uniq.length - 1, Math.floor(((i + ((i * 0.618) % 1)) * uniq.length) / M))]);
+      const sampleBytes = {};
+      let done = 0;
+      for (const side of sides) {
+        const canvas = new OffscreenCanvas(side, side);
+        const ctx = canvas.getContext("2d");
+        sampleBytes[side] = {};
+        for (const q of [Q_BY_SIDE[side], 0.35, Q_MIN]) {
+          if (sampleBytes[side][q] != null) continue;
+          let sum = 0;
+          for (const f of sample) { checkAbort(signal); sum += (await encodeStaticFrame(f.bmp, q, canvas, ctx)).payload.length; }
+          sampleBytes[side][q] = sum / sample.length;
+        }
+        prog("Calculating options…", 0.8 + (0.2 * ++done) / sides.length);
       }
-      prog("Calculando opciones…", 0.8 + (0.2 * ++done) / sides.length);
+      const overhead = 32; // cabecera ANMF + chunk
+      const cells = [];
+      for (const side of SIDES) for (const fps of FPS_LIST) {
+        if (!sampleBytes[side] || distinct[fps] == null) { cells.push({ side, fps, estado: "fuera" }); continue; }
+        const n = distinct[fps];
+        const est = (sampleBytes[side][Q_BY_SIDE[side]] + overhead) * n + 400;
+        const estMin = (sampleBytes[side][Q_MIN] + overhead) * n + 400;
+        const estado = est <= SAFE_BYTES ? "ok" : estMin <= SAFE_BYTES ? "baja" : "no";
+        cells.push({ side, fps, est: Math.round(est), estMin: Math.round(estMin), estado, score: score(side, fps) });
+      }
+      const pick = (st) => cells.filter((c) => c.estado === st).sort((x, y) => y.score - x.score)[0];
+      const auto = pick("ok") || pick("baja") || null;
+      const an = { ...base, frames, captureFps, captureSide, sampleBytes, distinct, cells, auto, ms: Math.round(performance.now() - t0) };
+      log("info", "analizar:resultado", {
+        ms: an.ms, captureFps, captureSide, distintos: distinct, muestra: M,
+        auto: auto && { side: auto.side, fps: auto.fps, est: auto.est, estado: auto.estado },
+        caben: cells.filter((c) => c.estado === "ok").length, conMenosCalidad: cells.filter((c) => c.estado === "baja").length,
+      });
+      prog("Options ready", 1);
+      return an;
+    } catch (e) {
+      release({ frames });
+      throw e;
     }
-    const overhead = 32; // cabecera ANMF + chunk
-    const cells = [];
-    for (const side of SIDES) for (const fps of FPS_LIST) {
-      if (!sampleBytes[side] || distinct[fps] == null) { cells.push({ side, fps, estado: "fuera" }); continue; }
-      const n = distinct[fps];
-      const est = (sampleBytes[side][Q_BY_SIDE[side]] + overhead) * n + 400;
-      const estMin = (sampleBytes[side][Q_MIN] + overhead) * n + 400;
-      const estado = est <= SAFE_BYTES ? "ok" : estMin <= SAFE_BYTES ? "baja" : "no";
-      cells.push({ side, fps, est: Math.round(est), estMin: Math.round(estMin), estado, score: score(side, fps) });
-    }
-    const pick = (st) => cells.filter((c) => c.estado === st).sort((x, y) => y.score - x.score)[0];
-    const auto = pick("ok") || pick("baja") || null;
-    const an = { ...base, frames, captureFps, captureSide, sampleBytes, distinct, cells, auto, ms: Math.round(performance.now() - t0) };
-    log("info", "analizar:resultado", {
-      ms: an.ms, captureFps, captureSide, distintos: distinct, muestra: M,
-      auto: auto && { side: auto.side, fps: auto.fps, est: auto.est, estado: auto.estado },
-      caben: cells.filter((c) => c.estado === "ok").length, conMenosCalidad: cells.filter((c) => c.estado === "baja").length,
-    });
-    prog("Opciones listas", 1);
-    return an;
   }
 
   function release(an) {
@@ -892,7 +898,7 @@
 
   // Paso 2: codifica el audio y el sticker con la combinación elegida.
   async function create(an, { side, fps, syncMs = 0, still = false, audio = null, onProgress, signal, packName = "", publisher = "" }) {
-    if (!an || !an.frames) throw new Error("Primero calcula las opciones del tramo");
+    if (!an || !an.frames) throw new Error("Calculate options for the clip first");
     syncMs = Math.max(0, Math.min(1000, Math.round(+syncMs || 0)));
     still = !!still && an.visual.kind === "image";
     const prog = onProgress || (() => {});
@@ -901,26 +907,26 @@
     // El audio puede cambiar después del análisis sin recalcular: con "independiente" no afecta a los cuadros.
     const A = audio || an.audio;
     if (an.visual.kind === "image" || an.fit !== "independiente") {
-      if (Math.abs(A.dur - an.audio.dur) > 0.002) throw new Error("La duración del audio cambió: vuelve a calcular las opciones");
+      if (Math.abs(A.dur - an.audio.dur) > 0.002) throw new Error("Audio duration changed: recalculate options");
     }
     const cell = an.cells.find((c) => c.side === side && c.fps === fps);
     log("info", "crear:parametros", { side, fps, compensacionMs: syncMs, estatico: still, estimado: cell && cell.est, estado: cell && cell.estado });
 
     // Audio: la tasa de bits baja en clips largos para no pasar de 1 MB (límite de WhatsApp).
     const bitrate = Math.max(12000, Math.min(32000, Math.floor((0.9 * MAX_AUDIO_BYTES * 8) / A.dur)));
-    if ((bitrate / 8) * A.dur > 0.97 * MAX_AUDIO_BYTES) throw new Error(`Con ${Math.round(A.dur)} s el audio no cabe en 1 MB (límite de WhatsApp). Máximo unos ${Math.floor((0.9 * MAX_AUDIO_BYTES * 8) / 12000 / 60)} minutos.`);
-    prog("Extrayendo audio…", 0);
+    if ((bitrate / 8) * A.dur > 0.97 * MAX_AUDIO_BYTES) throw new Error(`At ${Math.round(A.dur)} s the audio exceeds 1 MB (WhatsApp limit). Max is about ${Math.floor((0.9 * MAX_AUDIO_BYTES * 8) / 12000 / 60)} minutes.`);
+    prog("Extracting audio…", 0);
     // Un audio aparte se corta donde el usuario quiera: se suaviza el corte para evitar clics.
     const pcm = await extractAudio(A.file, A.start, A.dur, A.file !== an.visual.file ? 8 : 0);
     checkAbort(signal);
-    prog("Codificando audio…", 0.05);
+    prog("Encoding audio…", 0.05);
     const { packets, preSkip, config } = await encodeOpus(pcm, bitrate);
     const ogg = buildOggOpus(packets, preSkip, pcm.length);
-    if (ogg.length > MAX_AUDIO_BYTES) throw new Error(`El audio pesa ${Math.round(ogg.length / 1000)} KB (máximo 1000 KB)`);
+    if (ogg.length > MAX_AUDIO_BYTES) throw new Error(`Audio is ${Math.round(ogg.length / 1000)} KB (max 1000 KB)`);
     const soundSha = await sha256b64(ogg);
     const oggCheck = await verifyOgg(ogg);
     log(oggCheck.ok ? "info" : "error", "audio:ogg", { bytes: ogg.length, paquetes: packets.length, preSkip, config, verificacion: oggCheck, soundSha256: soundSha });
-    if (!oggCheck.ok) throw new Error("El audio generado no se puede reproducir: " + oggCheck.error);
+    if (!oggCheck.ok) throw new Error("Generated audio cannot be played: " + oggCheck.error);
 
     const exifMeta = await stickerMeta({ packName, publisher, soundSha });
     const w = await encodeWebp(an, side, fps, exifMeta, { onProgress: prog, signal, syncMs, still });
@@ -933,7 +939,7 @@
       msTotal: Math.round(performance.now() - t0),
     };
     log("info", "crear:resultado", info);
-    prog("Listo", 1);
+    prog("Ready", 1);
     return { webp: new Blob([w.bytes], { type: "image/webp" }), ogg: new Blob([ogg], { type: "audio/ogg; codecs=opus" }), info };
   }
 
@@ -946,7 +952,7 @@
         const ok = an.cells.filter((x) => (side === "auto" || x.side === +side) && (fps === "auto" || x.fps === +fps) && x.estado !== "no" && x.estado !== "fuera");
         c = ok.sort((x, y) => y.score - x.score)[0];
       }
-      if (!c) throw new Error("Ninguna combinación cabe en 1 MB para este tramo");
+      if (!c) throw new Error("No combination fits under 1 MB for this clip");
       const r = await create(an, { side: c.side, fps: c.fps, syncMs, still, onProgress, signal });
       r.analysis = { auto: an.auto, cells: an.cells, ms: an.ms, captureFps: an.captureFps, captureSide: an.captureSide };
       return r;

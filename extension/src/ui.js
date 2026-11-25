@@ -123,10 +123,10 @@
     const entries = stored && stored.length ? stored : WAAS.entries;
     const content = JSON.stringify({ exportado: new Date().toISOString(), version: WAAS.VERSION, ua: navigator.userAgent, entradas: entries }, null, 1);
     const blob = new Blob([content], { type: "application/json" });
-    const name = "registro-stickers-con-sonido-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
+    const name = "sound-stickers-log-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
     if (window.showSaveFilePicker) {
       try {
-        const handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "Registro JSON", accept: { "application/json": [".json"] } }] });
+        const handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "JSON Log", accept: { "application/json": [".json"] } }] });
         const w = await handle.createWritable();
         await w.write(blob);
         await w.close();
@@ -181,19 +181,19 @@
       const media = isVideo ? h("video", { playsInline: true, preload: "auto" }) : h("audio", { preload: "auto" });
       const wave = isVideo ? null : h("canvas");
       const selBar = h("div", { class: "sel" });
-      const hS = h("div", { class: "handle", title: "Inicio del tramo (arrastra)" });
-      const hE = h("div", { class: "handle", title: "Fin del tramo (arrastra)" });
+      const hS = h("div", { class: "handle", title: "Clip start (drag)" });
+      const hE = h("div", { class: "handle", title: "Clip end (drag)" });
       const ph = h("div", { class: "ph" });
-      const track = h("div", { class: "track" + (isVideo ? "" : " audio"), title: "Haz clic o arrastra para moverte" }, wave, selBar, ph, hS, hE);
+      const track = h("div", { class: "track" + (isVideo ? "" : " audio"), title: "Click or drag to seek" }, wave, selBar, ph, hS, hE);
       const tLeft = h("span"), tRight = h("span");
-      const playSegBtn = h("button", { class: "sec", textContent: "▶ Tramo" });
-      const playCurBtn = h("button", { class: "sec", textContent: "▶ Desde el cursor" });
-      const playEndBtn = h("button", { class: "sec", textContent: "▶ Final del tramo" });
+      const playSegBtn = h("button", { class: "sec", textContent: "▶ Clip" });
+      const playCurBtn = h("button", { class: "sec", textContent: "▶ From cursor" });
+      const playEndBtn = h("button", { class: "sec", textContent: "▶ Clip end" });
       const curLbl = h("span", { class: "muted grow", style: "text-align:right" });
       const startNum = h("input", { type: "number", min: 0, step: 0.01 });
       const endNum = h("input", { type: "number", min: 0, step: 0.01 });
-      const startCur = h("button", { class: "sec", textContent: "⤓ cursor", title: "Usar la posición del cursor como inicio" });
-      const endCur = h("button", { class: "sec", textContent: "⤓ cursor", title: "Usar la posición del cursor como fin" });
+      const startCur = h("button", { class: "sec", textContent: "⤓ cursor", title: "Set start to cursor position" });
+      const endCur = h("button", { class: "sec", textContent: "⤓ cursor", title: "Set end to cursor position" });
       const lenLbl = h("span", { class: "muted" });
       const t = { start: 0, end: 0, playhead: 0, stopAt: null, dur: 0, offset: 0, url: null, peaks: null, peakMax: 1, muted: false };
       const listeners = new Set();
@@ -203,11 +203,11 @@
         isVideo ? media : null, track, h("div", { class: "times" }, tLeft, tRight),
         h("div", { class: "row" }, playSegBtn, playCurBtn, playEndBtn, curLbl),
         h("div", { class: "trim" },
-          h("span", null, "Inicio"),
-          h("span", { class: "row", style: "margin:0" }, mkStep("−", "Un cuadro antes", () => setStart(t.start - FRAME)), startNum, mkStep("+", "Un cuadro después", () => setStart(t.start + FRAME))),
+          h("span", null, "Start"),
+          h("span", { class: "row", style: "margin:0" }, mkStep("−", "One frame back", () => setStart(t.start - FRAME)), startNum, mkStep("+", "One frame forward", () => setStart(t.start + FRAME))),
           h("span", { class: "row", style: "margin:0" }, startCur),
-          h("span", null, "Fin"),
-          h("span", { class: "row", style: "margin:0" }, mkStep("−", "Un cuadro antes", () => setEnd(t.end - FRAME)), endNum, mkStep("+", "Un cuadro después", () => setEnd(t.end + FRAME))),
+          h("span", null, "End"),
+          h("span", { class: "row", style: "margin:0" }, mkStep("−", "One frame back", () => setEnd(t.end - FRAME)), endNum, mkStep("+", "One frame forward", () => setEnd(t.end + FRAME))),
           h("span", { class: "row", style: "margin:0" }, endCur, lenLbl)),
         hint ? h("div", { class: "muted", style: "margin-top:6px" }, hint) : null);
 
@@ -224,7 +224,7 @@
         curLbl.textContent = "cursor " + fmtT(t.playhead);
         if (root.activeElement !== startNum) startNum.value = t.start.toFixed(2);
         if (root.activeElement !== endNum) endNum.value = t.end.toFixed(2);
-        lenLbl.textContent = "duración " + fmtT(t.end - t.start);
+        lenLbl.textContent = "duration " + fmtT(t.end - t.start);
       };
 
       const drawWave = () => {
@@ -380,24 +380,24 @@
 
     // Sección de audio aparte (pestañas 2 y 3): archivo + tramo con forma de onda.
     function makeAudioSource(onChange) {
-      const picker = makePicker("Elegir audio…", "audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.mp4,.mov,.webm",
-        "MP3, M4A, OGG, WAV… o un video del que tomar el sonido.");
-      const trimmer = makeTrimmer("audio", "Elige de dónde a dónde suena. Arrastra las asas o escribe los segundos.");
+      const picker = makePicker("Choose audio…", "audio/*,video/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.mp4,.mov,.webm",
+        "MP3, M4A, OGG, WAV… or a video to extract sound from.");
+      const trimmer = makeTrimmer("audio", "Choose start and end times. Drag the handles or enter seconds.");
       const wrap = h("div", { style: "display:none" }, trimmer.el);
       const s = { file: null };
       picker.onPick(async (f) => {
-        picker.info.textContent = "Leyendo " + f.name + "…";
+        picker.info.textContent = "Reading " + f.name + "…";
         await run("audio", async () => {
           try {
             const a = await WAAS.probeAudio(f);
             s.file = f;
             trimmer.load(f, { duration: a.duration, peaks: a.peaks, peakMax: a.peakMax });
             wrap.style.display = "";
-            picker.info.textContent = `${f.name} · ${fmtT(a.duration)}${a.peakMax < 0.001 ? " · parece no tener sonido" : ""}`;
+            picker.info.textContent = `${f.name} · ${fmtT(a.duration)}${a.peakMax < 0.001 ? " · appears to have no sound" : ""}`;
             log("info", "ui:audio-elegido", { nombre: f.name, tipo: f.type, bytes: f.size, duracion: a.duration, canales: a.channels, pico: +a.peakMax.toFixed(4) });
           } catch (e) {
             log("error", "ui:audio-error", e);
-            picker.info.textContent = "No se pudo leer: " + e.message;
+            picker.info.textContent = "Could not read: " + e.message;
             s.file = null;
             trimmer.clear();
             wrap.style.display = "none";
@@ -418,30 +418,30 @@
     // getParams() devuelve { visual, audio, fit } o null si faltan datos.
     function makeFormat({ getParams, grid = true, sync = true, still = false, extras = [] }) {
       const f = { mode: "ajustar", an: null, anKey: null, sel: null };
-      const segAjustar = h("button", { textContent: "Ajustar (bordes transparentes)", class: "on" });
-      const segRecortar = h("button", { textContent: "Recortar (llenar el cuadro)" });
-      const calcBtn = h("button", { class: "act", textContent: "Calcular opciones" });
+      const segAjustar = h("button", { textContent: "Fit (transparent edges)", class: "on" });
+      const segRecortar = h("button", { textContent: "Crop (fill frame)" });
+      const calcBtn = h("button", { class: "act", textContent: "Calculate options" });
       const calcInfo = h("span", { class: "muted" });
-      const staleLbl = h("div", { class: "stale", style: "display:none" }, "Algo cambió: vuelve a calcular las opciones.");
+      const staleLbl = h("div", { class: "stale", style: "display:none" }, "Something changed: recalculate options.");
       // Barra propia del cálculo (la de "Crear y enviar" es solo para crear).
       const calcBarIn = h("div");
       const calcBar = h("div", { class: "bar", style: "display:none" }, calcBarIn);
       const gridHost = h("div");
       const selLbl = h("div", { class: "row", style: "font-weight:600" });
       const legend = h("div", { class: "legend" },
-        h("span", null, h("i", { style: "background:var(--ok-bg);border:1px solid var(--ok)" }), "cabe"),
-        h("span", null, h("i", { style: "background:var(--warn-bg);border:1px solid var(--warn)" }), "cabe bajando la calidad"),
-        h("span", null, h("i", { style: "border:1px solid var(--line)" }), "✕ supera 1 MB (WhatsApp lo rechaza)"),
-        h("span", null, "★ recomendada · valores en KB"));
+        h("span", null, h("i", { style: "background:var(--ok-bg);border:1px solid var(--ok)" }), "fits"),
+        h("span", null, h("i", { style: "background:var(--warn-bg);border:1px solid var(--warn)" }), "fits with lower quality"),
+        h("span", null, h("i", { style: "border:1px solid var(--line)" }), "✕ over 1 MB (WhatsApp rejects it)"),
+        h("span", null, "★ recommended · values in KB"));
       const syncNum = h("input", { type: "number", min: 0, max: 1000, step: 10, value: store.get("waas-compensacion-ms", 0) });
       syncNum.addEventListener("change", () => { store.set("waas-compensacion-ms", +syncNum.value || 0); api.onUpdate(); });
       const stillChk = h("input", { type: "checkbox", onchange: () => api.onUpdate() });
       const advRows = [];
-      if (sync) advRows.push(h("div", { class: "row" }, h("span", null, "Compensar desfase (ms)"), syncNum,
-        h("span", { class: "muted" }, "Normalmente 0. Si en algún celular el audio va atrasado, la imagen esperará este tiempo.")));
-      if (still) advRows.push(h("label", { class: "chk" }, stillChk, h("span", null, "Enviar como imagen fija (experimental)",
-        h("div", { class: "muted" }, "Por defecto la imagen se envía como un sticker animado de un solo cuadro que dura lo que el audio, igual que los stickers con sonido conocidos. Marca esto para probar si WhatsApp también acepta el sonido en un sticker fijo."))));
-      const advanced = advRows.length ? h("details", null, h("summary", null, "Avanzado"), ...advRows) : null;
+      if (sync) advRows.push(h("div", { class: "row" }, h("span", null, "Sync offset (ms)"), syncNum,
+        h("span", { class: "muted" }, "Usually 0. If audio lags on some phones, the image will wait this long.")));
+      if (still) advRows.push(h("label", { class: "chk" }, stillChk, h("span", null, "Send as still image (experimental)",
+        h("div", { class: "muted" }, "By default, the image is sent as a single-frame animated sticker lasting as long as the audio, matching known sound stickers. Check this to test if WhatsApp also plays sound on a still sticker."))));
+      const advanced = advRows.length ? h("details", null, h("summary", null, "Advanced"), ...advRows) : null;
 
       // Clave del análisis: solo lo que cambia los cuadros del sticker. El audio se sube aparte (no
       // suma al peso del sticker), así que solo cuenta su duración cuando la animación se ajusta a él.
@@ -460,7 +460,7 @@
         return JSON.stringify([key(), fileId(p.audio.file), +p.audio.start.toFixed(3), +p.audio.dur.toFixed(3), p.fit, f.sel, api.options()]);
       };
       const fresh = () => !!f.an && f.anKey === key();
-      const CALC_HINT = "Lee el tramo una vez y estima el peso de cada combinación.";
+      const CALC_HINT = "Reads the clip once and estimates the size of each combination.";
       const reset = () => { if (f.an) WAAS.release(f.an); f.an = null; f.sel = null; gridHost.textContent = ""; selLbl.textContent = ""; calcInfo.textContent = CALC_HINT; };
       calcInfo.textContent = CALC_HINT;
 
@@ -476,9 +476,9 @@
           const isSel = f.sel && f.sel.side === side && f.sel.fps === fps;
           const can = !!c && (c.estado === "ok" || c.estado === "baja");
           const label = !c || c.estado === "fuera" ? "·" : c.estado === "no" ? "✕" : (isAuto ? "★" : "") + Math.round(c.est / 1000);
-          const title = !c || c.estado === "fuera" ? "No disponible para este tramo"
-            : c.estado === "no" ? `≈ ${fmtB(c.estMin)} aun con la calidad mínima: supera 1 MB`
-            : c.estado === "baja" ? `≈ ${fmtB(c.est)} con la calidad normal: se bajará la calidad para que quepa`
+          const title = !c || c.estado === "fuera" ? "Not available for this clip"
+            : c.estado === "no" ? `≈ ${fmtB(c.estMin)} even at minimum quality: exceeds 1 MB`
+            : c.estado === "baja" ? `≈ ${fmtB(c.est)} at normal quality: quality will be lowered to fit`
             : `≈ ${fmtB(c.est)}`;
           return h("td", null, h("button", {
             class: (c ? c.estado : "fuera") + (isSel ? " sel" : ""), textContent: label, title, disabled: !can,
@@ -487,7 +487,7 @@
         })));
         gridHost.append(h("table", { class: "grid" }, thead, rows));
         const c = f.sel && an.cells.find((x) => x.side === f.sel.side && x.fps === f.sel.fps);
-        selLbl.textContent = c ? `Elegido: ${c.side} px · ${c.fps} fps · ≈ ${fmtB(c.est)}${c.estado === "baja" ? " (con menos calidad)" : ""}` : "Ninguna combinación cabe en 1 MB: acorta el tramo.";
+        selLbl.textContent = c ? `Selected: ${c.side} px · ${c.fps} fps · ≈ ${fmtB(c.est)}${c.estado === "baja" ? " (lower quality)" : ""}` : "No combination fits under 1 MB: shorten the clip.";
       };
 
       segAjustar.addEventListener("click", () => { f.mode = "ajustar"; api.onUpdate(); });
@@ -505,16 +505,16 @@
           }));
           f.an = an; f.anKey = k;
           f.sel = an.auto ? { side: an.auto.side, fps: an.auto.fps } : null;
-          calcInfo.textContent = `Listo en ${(an.ms / 1000).toFixed(1)} s. Elige una casilla (★ = recomendada).`;
+          calcInfo.textContent = `Ready in ${(an.ms / 1000).toFixed(1)} s. Pick a cell (★ = recommended).`;
           renderGrid();
         } catch (e) {
-          calcInfo.textContent = e.name === "AbortError" ? "Cancelado" : "Error: " + e.message;
+          calcInfo.textContent = e.name === "AbortError" ? "Cancelled" : "Error: " + e.message;
         }
         api.setProgress(0);
         api.onUpdate();
       });
 
-      const body = [...extras, h("div", { class: "row" }, h("span", null, "Encuadre"), h("span", { class: "seg" }, segAjustar, segRecortar))];
+      const body = [...extras, h("div", { class: "row" }, h("span", null, "Framing"), h("span", { class: "seg" }, segAjustar, segRecortar))];
       if (grid) body.push(h("div", { class: "row" }, calcBtn, calcInfo), calcBar, staleLbl, gridHost, selLbl, legend);
       if (advanced) body.push(advanced);
 
@@ -552,29 +552,29 @@
     // Crear y enviar: datos del paquete, creación, vista previa y envío.
     function makeCreate({ fmt, getBase }) {
       const META_KEY = "waas-metadatos";
-      const packInput = h("input", { type: "text", maxLength: 128, placeholder: "Ej.: Mis memes" });
-      const authorInput = h("input", { type: "text", maxLength: 128, placeholder: "Ej.: tu nombre o apodo" });
+      const packInput = h("input", { type: "text", maxLength: 128, placeholder: "e.g. My memes" });
+      const authorInput = h("input", { type: "text", maxLength: 128, placeholder: "e.g. your name or handle" });
       const loadMeta = () => { const m = store.get(META_KEY, {}) || {}; packInput.value = m.paquete || ""; authorInput.value = m.autor || ""; };
       const saveMeta = () => store.set(META_KEY, { paquete: packInput.value, autor: authorInput.value });
       loadMeta();
       packInput.addEventListener("change", saveMeta);
       authorInput.addEventListener("change", saveMeta);
-      const createBtn = h("button", { class: "act", textContent: "Crear sticker" });
-      const cancelBtn = h("button", { class: "sec", textContent: "Cancelar", style: "display:none" });
+      const createBtn = h("button", { class: "act", textContent: "Create sticker" });
+      const cancelBtn = h("button", { class: "sec", textContent: "Cancel", style: "display:none" });
       const barIn = h("div");
       const status = h("div", { class: "status" });
-      const resImg = h("img", { class: "thumb", alt: "vista previa del sticker" });
+      const resImg = h("img", { class: "thumb", alt: "sticker preview" });
       const resAudio = h("audio", { controls: true });
       const resInfo = h("div", { class: "muted", style: "max-width:380px" });
-      const togetherBtn = h("button", { class: "sec", textContent: "▶ Ver y oír juntos" });
+      const togetherBtn = h("button", { class: "sec", textContent: "▶ Preview together" });
       const destSel = h("select", null,
-        h("option", { value: "abierto-solo", textContent: "Enviar al chat abierto" }),
-        h("option", { value: "abierto", textContent: "Enviar al chat abierto y abrir Reenviar" }),
-        h("option", { value: "propio", textContent: "Guardar en mi chat (Tú) y abrir Reenviar" }));
-      const sendBtn = h("button", { class: "act", textContent: "Enviar" });
-      const dlBtn = h("button", { class: "sec", textContent: "Descargar .webp y .ogg" });
+        h("option", { value: "abierto-solo", textContent: "Send to open chat" }),
+        h("option", { value: "abierto", textContent: "Send to open chat & open Forward" }),
+        h("option", { value: "propio", textContent: "Save to self chat (You) & open Forward" }));
+      const sendBtn = h("button", { class: "act", textContent: "Send" });
+      const dlBtn = h("button", { class: "sec", textContent: "Download .webp & .ogg" });
       const staleNote = h("div", { class: "stale", style: "display:none;margin-top:8px" },
-        "Cambiaste algo después de crear este sticker. Pulsa «Crear sticker con los cambios»; si lo envías ahora, se envía la versión anterior.");
+        "Something changed after creating this sticker. Click «Recreate sticker»; if you send it now, the previous version will be sent.");
       const resultBox = h("div", { class: "result" }, resImg, h("div", null, resAudio, h("div", { class: "row" }, togetherBtn), resInfo));
       const result = h("div", { style: "display:none" }, staleNote, resultBox,
         h("div", { class: "row", style: "margin-top:10px" }, destSel, sendBtn, dlBtn));
@@ -611,12 +611,12 @@
           c.urls.push(u1, u2);
           resImg.src = u1; resAudio.src = u2;
           const i = res.info;
-          const durTxt = Math.abs(i.duracion - i.duracionAudio) > 0.05 ? `imagen ${fmtT(i.duracion)} · audio ${fmtT(i.duracionAudio)}` : fmtT(i.duracion);
-          resInfo.textContent = `${durTxt} · ${i.lado} px${i.fps ? " · " + i.fps + " fps" : ""}${i.isAnimated ? "" : " · fijo"} · calidad ${Math.round(i.calidad * 100)} · sticker ${fmtB(i.webpBytes)}${i.estimado ? " (estimado " + fmtB(i.estimado) + ")" : ""} · audio ${fmtB(i.oggBytes)} a ${i.audioKbps} kbps`;
+          const durTxt = Math.abs(i.duracion - i.duracionAudio) > 0.05 ? `image ${fmtT(i.duracion)} · audio ${fmtT(i.duracionAudio)}` : fmtT(i.duracion);
+          resInfo.textContent = `${durTxt} · ${i.lado} px${i.fps ? " · " + i.fps + " fps" : ""}${i.isAnimated ? "" : " · still"} · quality ${Math.round(i.calidad * 100)} · sticker ${fmtB(i.webpBytes)}${i.estimado ? " (est. " + fmtB(i.estimado) + ")" : ""} · audio ${fmtB(i.oggBytes)} at ${i.audioKbps} kbps`;
           result.style.display = "";
-          setStatus("Sticker listo. Revisa la vista previa y envíalo.", 1);
+          setStatus("Sticker ready. Check the preview and send it.", 1);
         } catch (e) {
-          setStatus(e.name === "AbortError" ? "Cancelado" : "Error: " + e.message, 0, e.name !== "AbortError");
+          setStatus(e.name === "AbortError" ? "Cancelled" : "Error: " + e.message, 0, e.name !== "AbortError");
         }
         // run() desbloquea el panel antes de que el resultado quede guardado: se refresca otra vez aquí
         // (sin esto, el botón Enviar quedaba gris hasta cambiar de pestaña).
@@ -653,10 +653,10 @@
               onProgress: (t) => setStatus(t),
             });
           });
-          setStatus(dest === "abierto-solo" ? "Enviado." : "Enviado. Elige en el diálogo los chats a los que reenviarlo.", 1);
+          setStatus(dest === "abierto-solo" ? "Sent." : "Sent. Choose which chats to forward it to in the dialog.", 1);
           api.onSent();
         } catch (e) {
-          setStatus("Error al enviar: " + e.message, 0, true);
+          setStatus("Send error: " + e.message, 0, true);
         }
       });
       dlBtn.addEventListener("click", () => {
@@ -670,8 +670,8 @@
       const api = {
         body: [
           h("div", null,
-            h("div", { class: "muted" }, "Datos del sticker (opcional): WhatsApp los muestra debajo del sticker. Se recuerdan."),
-            h("div", { class: "meta" }, h("span", null, "Paquete"), packInput, h("span", null, "Autor"), authorInput)),
+            h("div", { class: "muted" }, "Sticker metadata (optional): WhatsApp shows this below the sticker. Saved automatically."),
+            h("div", { class: "meta" }, h("span", null, "Pack"), packInput, h("span", null, "Author"), authorInput)),
           h("div", { class: "row" }, createBtn, cancelBtn), h("div", { class: "bar" }, barIn), status, result,
         ],
         onSent: () => {},
@@ -681,7 +681,7 @@
         refresh() {
           const stale = !!c.result && c.key !== fmt.fullKey();
           const done = !!c.result && !stale;
-          createBtn.textContent = done ? "✓ Sticker creado" : c.result ? "Crear sticker con los cambios" : "Crear sticker";
+          createBtn.textContent = done ? "✓ Sticker created" : c.result ? "Recreate sticker" : "Create sticker";
           createBtn.disabled = G.busy || !fmt.ready || done;
           staleNote.style.display = stale ? "" : "none";
           resultBox.style.opacity = stale ? ".45" : "";
@@ -698,8 +698,8 @@
       const create = makeCreate({ fmt, getBase });
       let n = 0;
       const secs = sources.map((s) => section(++n, s.title, ...s.body));
-      const secFmt = section(++n, "Formato", ...fmt.body);
-      const secCreate = section(++n, "Crear y enviar", ...create.body);
+      const secFmt = section(++n, "Format", ...fmt.body);
+      const secCreate = section(++n, "Create & send", ...create.body);
       const el = h("div", { style: "display:none" }, h("div", { class: "muted tabdesc" }, desc), ...secs, secFmt, secCreate);
       const form = {
         id, title, el, create, stop,
@@ -721,8 +721,8 @@
 
     // ============================================================ pestaña 1: video con su sonido
     function videoForm() {
-      const picker = makePicker("Elegir video…", "video/*,.mov,.mp4,.webm,.mkv", "Cualquier video con sonido.");
-      const trimmer = makeTrimmer("video", "Arrastra las asas verdes: el video muestra el cuadro donde quedan. Haz clic o arrastra en la barra para mover el cursor.");
+      const picker = makePicker("Choose video…", "video/*,.mov,.mp4,.webm,.mkv", "Any video with sound.");
+      const trimmer = makeTrimmer("video", "Drag the green handles: the video shows the exact frame. Click or drag the bar to seek.");
       const s = { file: null };
       const changed = () => form.refresh();
       const fmt = makeFormat({
@@ -735,7 +735,7 @@
         trimmer.stop();
         fmt.reset();
         form.create.clear();
-        picker.info.textContent = "Leyendo " + f.name + "…";
+        picker.info.textContent = "Reading " + f.name + "…";
         await run("video", async () => {
           try {
             const meta = await WAAS.probeVideo(f);
@@ -745,7 +745,7 @@
             log("info", "ui:video-elegido", { nombre: f.name, tipo: f.type, bytes: f.size, ...meta });
           } catch (e) {
             log("error", "ui:video-error", e);
-            picker.info.textContent = "No se pudo leer: " + e.message;
+            picker.info.textContent = "Could not read: " + e.message;
             s.file = null;
             trimmer.clear();
           }
@@ -755,10 +755,10 @@
       trimmer.onChange(changed);
       const form = makeForm({
         id: "video", title: "Video",
-        desc: "Un video con su propio sonido: se recorta el tramo y la imagen y el audio van juntos.",
+        desc: "A video with its own sound: trim the clip and image and audio stay synced.",
         sources: [
           { title: "Video", body: [picker.el], ready: () => !!s.file },
-          { title: "Tramo", body: [trimmer.el], ready: () => trimmer.loaded, enabled: () => trimmer.loaded },
+          { title: "Clip", body: [trimmer.el], ready: () => trimmer.loaded, enabled: () => trimmer.loaded },
         ],
         fmt, getBase: () => baseName(s.file), stop: () => trimmer.stop(),
       });
@@ -767,9 +767,9 @@
 
     // ============================================================ pestaña 2: imagen + audio
     function imageForm() {
-      const picker = makePicker("Elegir imagen…", "image/*", "JPG, PNG, WebP… (una foto, un dibujo, un meme).");
-      const thumb = h("img", { class: "thumb", alt: "imagen elegida", style: "display:none" });
-      const animNote = h("div", { class: "note", style: "display:none" }, "Es una imagen animada: aquí solo se usa su primer cuadro. Para que se mueva, usa la pestaña «Video o GIF + audio».");
+      const picker = makePicker("Choose image…", "image/*", "JPG, PNG, WebP… (a photo, drawing, or meme).");
+      const thumb = h("img", { class: "thumb", alt: "selected image", style: "display:none" });
+      const animNote = h("div", { class: "note", style: "display:none" }, "This is an animated image: only its first frame is used here. To keep it animated, use the «Video or GIF + audio» tab.");
       const s = { file: null, url: null };
       const changed = () => form.refresh();
       const audio = makeAudioSource(changed);
@@ -779,7 +779,7 @@
       });
       picker.onPick(async (f) => {
         form.create.clear();
-        picker.info.textContent = "Leyendo " + f.name + "…";
+        picker.info.textContent = "Reading " + f.name + "…";
         await run("imagen", async () => {
           try {
             const meta = await WAAS.probeImage(f);
@@ -792,17 +792,17 @@
             log("info", "ui:imagen-elegida", { nombre: f.name, tipo: f.type, bytes: f.size, ...meta });
           } catch (e) {
             log("error", "ui:imagen-error", e);
-            picker.info.textContent = "No se pudo leer: " + e.message;
+            picker.info.textContent = "Could not read: " + e.message;
             s.file = null; thumb.style.display = "none"; animNote.style.display = "none";
           }
         });
         changed();
       });
       const form = makeForm({
-        id: "imagen", title: "Imagen + audio",
-        desc: "Una imagen fija con el sonido que elijas. El sticker dura lo que dure el tramo de audio.",
+        id: "imagen", title: "Image + audio",
+        desc: "A still image with any sound you choose. The sticker lasts as long as the audio clip.",
         sources: [
-          { title: "Imagen", body: [picker.el, thumb, animNote], ready: () => !!s.file },
+          { title: "Image", body: [picker.el, thumb, animNote], ready: () => !!s.file },
           { title: "Audio", body: audio.els, ready: () => audio.ready },
         ],
         fmt, getBase: () => baseName(s.file), stop: () => audio.trimmer.stop(),
@@ -812,41 +812,41 @@
 
     // ============================================================ pestaña 3: video o GIF + otro audio
     function mixForm() {
-      const picker = makePicker("Elegir video o GIF…", "video/*,image/gif,image/webp,image/apng,.gif,.mov,.mp4,.webm,.mkv",
-        "Un video (su sonido se ignora) o un GIF animado.");
-      const vTrim = makeTrimmer("video", "Elige el tramo de la animación. El sonido de este video no se usa.");
+      const picker = makePicker("Choose video or GIF…", "video/*,image/gif,image/webp,image/apng,.gif,.mov,.mp4,.webm,.mkv",
+        "A video (its sound is ignored) or an animated GIF.");
+      const vTrim = makeTrimmer("video", "Choose the animation clip. This video's sound is not used.");
       vTrim.setMuted(true);
       const vWrap = h("div", { style: "display:none" }, vTrim.el);
-      const gifImg = h("img", { class: "thumb", alt: "GIF elegido", style: "display:none" });
+      const gifImg = h("img", { class: "thumb", alt: "selected GIF", style: "display:none" });
       const s = { file: null, kind: null, gif: null, url: null };
       const changed = () => { updateSummary(); form.refresh(); };
       const audio = makeAudioSource(changed);
 
       const FIT_KEY = "waas-ajuste-duracion-v2";
       const fitSel = h("select", null,
-        h("option", { value: "independiente", textContent: "Que cada uno dure lo suyo" }),
-        h("option", { value: "repetir", textContent: "Repetir la animación hasta que termine el audio" }),
-        h("option", { value: "congelar", textContent: "Dejar quieto el último cuadro hasta que termine el audio" }));
+        h("option", { value: "independiente", textContent: "Keep each at its own duration" }),
+        h("option", { value: "repetir", textContent: "Loop animation until audio ends" }),
+        h("option", { value: "congelar", textContent: "Freeze last frame until audio ends" }));
       fitSel.value = store.get(FIT_KEY, "independiente");
       fitSel.addEventListener("change", () => { store.set(FIT_KEY, fitSel.value); changed(); });
       const summary = h("div", { class: "summary" });
-      const fitRow = h("div", null, h("div", { class: "row" }, h("span", null, "Si duran distinto"), fitSel));
-      const testBtn = h("button", { class: "sec", textContent: "▶ Probar juntos" });
+      const fitRow = h("div", null, h("div", { class: "row" }, h("span", null, "If durations differ"), fitSel));
+      const testBtn = h("button", { class: "sec", textContent: "▶ Test together" });
       const vDur = () => (s.kind === "gif" ? s.gif.duration : vTrim.len);
 
       function updateSummary() {
         summary.textContent = "";
-        if (!s.file || !audio.ready) { summary.append("Elige la animación y el audio para ver cuánto durará el sticker."); fitRow.style.display = "none"; return; }
+        if (!s.file || !audio.ready) { summary.append("Choose the animation and audio to see how long the sticker will last."); fitRow.style.display = "none"; return; }
         const v = vDur(), a = audio.params.dur;
         const same = Math.abs(v - a) < 0.05;
         fitRow.style.display = same ? "none" : "";
-        if (same) { summary.append(`Animación y audio duran lo mismo: ${fmtT(a)}.`); return; }
+        if (same) { summary.append(`Animation and audio have the same duration: ${fmtT(a)}.`); return; }
         const fit = fitSel.value;
-        let txt = `Animación ${fmtT(v)} · audio ${fmtT(a)}. `;
-        if (fit === "independiente") txt += "Cada uno conserva su duración: al tocar el sticker, la animación y el audio empiezan juntos y terminan por separado. Cambiar el audio no obliga a recalcular las opciones.";
-        else if (v > a) txt += `La animación es más larga: se corta a ${fmtT(a)}.`;
-        else if (fit === "repetir") txt += `El sticker dura ${fmtT(a)}: la animación se repite ${(a / v).toFixed(1).replace(".", ",")} veces.`;
-        else txt += `El sticker dura ${fmtT(a)}: la animación se detiene en su último cuadro a los ${fmtT(v)}.`;
+        let txt = `Animation ${fmtT(v)} · audio ${fmtT(a)}. `;
+        if (fit === "independiente") txt += "Each keeps its own duration: when tapped, animation and audio start together and end separately. Changing the audio won't require recalculating options.";
+        else if (v > a) txt += `Animation is longer: trimmed to ${fmtT(a)}.`;
+        else if (fit === "repetir") txt += `Sticker lasts ${fmtT(a)}: animation loops ${(a / v).toFixed(1)} times.`;
+        else txt += `Sticker lasts ${fmtT(a)}: animation freezes on its last frame at ${fmtT(v)}.`;
         summary.append(txt);
       }
 
@@ -859,7 +859,7 @@
       });
 
       const fmt = makeFormat({
-        extras: [summary, fitRow, h("div", { class: "row" }, testBtn, h("span", { class: "muted" }, "Vista previa: la animación se reproduce una vez, como en WhatsApp."))],
+        extras: [summary, fitRow, h("div", { class: "row" }, testBtn, h("span", { class: "muted" }, "Preview: animation plays once, just like in WhatsApp."))],
         getParams: () => {
           if (!s.file || !audio.ready) return null;
           const visual = s.kind === "gif" ? { kind: "gif", file: s.file, start: 0, dur: s.gif.duration } : { kind: "video", file: s.file, start: vTrim.start, dur: vTrim.len };
@@ -871,18 +871,18 @@
         vTrim.stop();
         fmt.reset();
         form.create.clear();
-        picker.info.textContent = "Leyendo " + f.name + "…";
+        picker.info.textContent = "Reading " + f.name + "…";
         await run("animacion", async () => {
           try {
             if (s.url) { URL.revokeObjectURL(s.url); s.url = null; }
             if (WAAS.isAnimationFile(f) || (f.type || "").startsWith("image/")) {
               const g = await WAAS.probeAnimation(f);
-              if (!g.animated) throw new Error("es una imagen fija. Usa la pestaña «Imagen + audio».");
+              if (!g.animated) throw new Error("it is a still image. Use the «Image + audio» tab.");
               s.file = f; s.kind = "gif"; s.gif = g;
               s.url = URL.createObjectURL(f);
               gifImg.src = s.url; gifImg.style.display = ""; vWrap.style.display = "none";
               vTrim.clear();
-              picker.info.textContent = `${f.name} · ${fmtT(g.duration)} · ${g.frames} cuadros · ${g.width}×${g.height} · se usa completo`;
+              picker.info.textContent = `${f.name} · ${fmtT(g.duration)} · ${g.frames} frames · ${g.width}×${g.height} · full clip used`;
               log("info", "ui:gif-elegido", { nombre: f.name, tipo: f.type, bytes: f.size, cuadros: g.frames, duracion: g.duration, ancho: g.width, alto: g.height });
             } else {
               const meta = await WAAS.probeVideo(f);
@@ -894,7 +894,7 @@
             }
           } catch (e) {
             log("error", "ui:animacion-error", e);
-            picker.info.textContent = "No se pudo usar: " + e.message;
+            picker.info.textContent = "Could not use: " + e.message;
             s.file = null; s.kind = null; s.gif = null;
             vTrim.clear(); vWrap.style.display = "none"; gifImg.style.display = "none";
           }
@@ -905,10 +905,10 @@
       updateSummary();
 
       const form = makeForm({
-        id: "mezcla", title: "Video o GIF + audio",
-        desc: "Una animación (video sin su sonido, o un GIF) con el audio que elijas.",
+        id: "mezcla", title: "Video or GIF + audio",
+        desc: "An animation (a muted video, or a GIF) with any audio you choose.",
         sources: [
-          { title: "Animación", body: [picker.el, vWrap, gifImg], ready: () => !!s.file },
+          { title: "Animation", body: [picker.el, vWrap, gifImg], ready: () => !!s.file },
           { title: "Audio", body: audio.els, ready: () => audio.ready },
         ],
         fmt, getBase: () => baseName(s.file),
@@ -934,19 +934,17 @@
     G.refreshTabs = () => tabBtns.forEach((b, i) => { b.classList.toggle("on", i === active); b.disabled = G.busy && i !== active; });
 
     const logBox = h("div", { class: "logbox" });
-    const tools = h("details", null, h("summary", null, "Herramientas de prueba (registro, diagnóstico)"),
+    const tools = h("details", null, h("summary", null, "Developer tools (log, diagnostics)"),
       h("div", { class: "row" },
-        h("button", { class: "sec", textContent: "Diagnóstico", onclick: () => WAAS.wa.diagnose().catch((e) => log("error", "diagnostico:error", e)) }),
-        h("button", { class: "sec", textContent: "Guardar registro…", onclick: () => saveLog().catch((e) => log("error", "registro:error", e)) }),
-        h("button", { class: "sec", textContent: "Ver registro completo", onclick: () => window.postMessage({ __waas: "openLog" }, location.origin) })),
+        h("button", { class: "sec", textContent: "Diagnostics", onclick: () => WAAS.wa.diagnose().catch((e) => log("error", "diagnostico:error", e)) }),
+        h("button", { class: "sec", textContent: "Save log…", onclick: () => saveLog().catch((e) => log("error", "registro:error", e)) }),
+        h("button", { class: "sec", textContent: "View full log", onclick: () => window.postMessage({ __waas: "openLog" }, location.origin) })),
       logBox);
 
-    const closeBtn = h("button", { class: "close", title: "Cerrar", textContent: "×" });
+    const closeBtn = h("button", { class: "close", title: "Close", textContent: "×" });
     const panel = h("div", { class: "panel" },
-      h("header", null, h("div", null, h("h2", null, "Stickers con sonido"), h("div", { class: "muted" }, "Versión " + WAAS.VERSION + " · todo se procesa en tu navegador · máximo 1 MB por sticker")),
-        h("div", { class: "hdr-r" },
-          h("a", { class: "kofi", href: "https://ko-fi.com/shirtep", target: "_blank", rel: "noopener", title: "La extensión es gratis. Si te sirve, puedes apoyar el proyecto en Ko-fi.", textContent: "☕ Apoyar" }),
-          closeBtn)),
+      h("header", null, h("div", null, h("h2", null, "Sound Stickers"), h("div", { class: "muted" }, "Version " + WAAS.VERSION + " · processed locally in your browser · max 1 MB per sticker")),
+        h("div", { class: "hdr-r" }, closeBtn)),
       h("nav", { class: "tabs" }, tabBtns),
       G.forms.map((f) => f.el), tools);
     const overlay = h("div", { class: "overlay", style: "display:none" }, panel);

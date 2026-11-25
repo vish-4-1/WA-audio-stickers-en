@@ -15,7 +15,7 @@
       } catch (e) { /* aún cargando */ }
       await new Promise((r) => setTimeout(r, 1000));
     }
-    throw new Error("WhatsApp Web no terminó de cargar en 3 minutos (¿sesión cerrada o código cambiado?)");
+    throw new Error("WhatsApp Web did not finish loading within 3 minutes (logged out or code changed?)");
   }
 
   (async () => {
@@ -29,7 +29,7 @@
       WAAS.info("wa:listo", { ms });
       // Las opciones (AB props) de la cuenta llegan unos segundos después de cargar la interfaz.
       await new Promise((r) => setTimeout(r, 8000));
-      await WAAS.wa.diagnose();
+      // await WAAS.wa.diagnose(); // Disabled automatic startup chat/module probe
     } catch (e) {
       WAAS.error("wa:no-listo", e);
     }

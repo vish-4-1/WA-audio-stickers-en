@@ -16,7 +16,7 @@ function render() {
   const errs = entries.filter((e) => e.level === "error").length;
   const warns = entries.filter((e) => e.level === "warn").length;
   const sessions = new Set(entries.map((e) => e.session)).size;
-  $("summary").textContent = `${entries.length} entradas · ${errs} errores · ${warns} avisos · ${sessions} sesiones`;
+  $("summary").textContent = `${entries.length} entries · ${errs} errors · ${warns} warnings · ${sessions} sessions`;
 }
 
 function load() {
@@ -27,21 +27,21 @@ $("dl").addEventListener("click", () => {
   const content = JSON.stringify({ exportado: new Date().toISOString(), version: chrome.runtime.getManifest().version, ua: navigator.userAgent, entradas: entries }, null, 1);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([content], { type: "application/json" }));
-  a.download = "registro-stickers-con-sonido-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
+  a.download = "sound-stickers-log-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
   a.click();
 });
 $("copy").addEventListener("click", async () => {
   await navigator.clipboard.writeText(JSON.stringify(entries, null, 1));
-  $("copy").textContent = "Copiado";
-  setTimeout(() => ($("copy").textContent = "Copiar"), 1500);
+  $("copy").textContent = "Copied";
+  setTimeout(() => ($("copy").textContent = "Copy"), 1500);
 });
 $("errors").addEventListener("click", () => {
   onlyErrors = !onlyErrors;
-  $("errors").textContent = onlyErrors ? "Ver todo" : "Solo errores";
+  $("errors").textContent = onlyErrors ? "Show all" : "Errors only";
   render();
 });
 $("clear").addEventListener("click", () => {
-  if (!confirm("¿Borrar todo el registro?")) return;
+  if (!confirm("Clear the entire log?")) return;
   chrome.storage.local.set({ log: [] }, load);
 });
 chrome.storage.onChanged.addListener((changes) => { if (changes.log) { entries = changes.log.newValue || []; render(); } });
