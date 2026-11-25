@@ -2,8 +2,21 @@
 
 A Chromium browser extension (Chrome, Edge, Brave) to convert videos, images, or GIFs into **WhatsApp stickers with sound** and send them directly from WhatsApp Web—processed 100% locally in your browser.
 
+**[Download Latest Release (`Audio-Stickers-v-1.0-en.zip`)](https://github.com/vish-4-1/WA-audio-stickers-en/releases/latest/download/Audio-Stickers-v-1.0-en.zip)** · **[View All Releases](https://github.com/vish-4-1/WA-audio-stickers-en/releases)**
+
 > **Credits & Upstream Attribution**
 > Forked and adapted from **[Shirtep/WA-audio-stickers](https://github.com/Shirtep/WA-audio-stickers)** (v0.7.2) by **Shirtep**, licensed under the [PolyForm Noncommercial 1.0.0 License](LICENSE.md). All core media conversion (WebCodecs, WebP/Ogg-Opus muxing) and WhatsApp Web integration architecture belong to the original author.
+
+---
+
+## Installation (Quick Download)
+
+1. Download **[`Audio-Stickers-v-1.0-en.zip`](https://github.com/vish-4-1/WA-audio-stickers-en/releases/latest/download/Audio-Stickers-v-1.0-en.zip)** from the [Releases](https://github.com/vish-4-1/WA-audio-stickers-en/releases) page and extract it to a permanent folder.
+2. Open `chrome://extensions` (or `brave://extensions` / `edge://extensions`) and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted extension folder (containing `manifest.json`).
+4. Open or reload [https://web.whatsapp.com](https://web.whatsapp.com) and click the **Sound Stickers** extension icon.
+
+*(Alternatively, if cloning this repository directly, select the `extension/` subfolder when clicking **Load unpacked**.)*
 
 ---
 
@@ -18,15 +31,6 @@ A Chromium browser extension (Chrome, Edge, Brave) to convert videos, images, or
    - Added `ImageBitmap` cleanup (`release({ frames })`) when `analyze()` aborts or throws mid-encoding (`convert.js`).
    - Revoked `URL.createObjectURL` Blob URLs on video load error or timeout (`convert.js`).
    - Added read-only chat checks (`chat.isReadOnly || chat.canSend === false`) and explicit server acknowledgment timeout errors before opening the forward modal (`wa.js`).
-
----
-
-## Installation (Unpacked)
-
-1. Clone or download this repository.
-2. Open `chrome://extensions` (or `brave://extensions` / `edge://extensions`) and enable **Developer mode**.
-3. Click **Load unpacked** and select the `extension/` folder.
-4. Open or reload `https://web.whatsapp.com` and click the extension icon.
 
 ## License
 
